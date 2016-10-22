@@ -56,6 +56,8 @@ class Robot(object):
         #print self.location
         #print self.known_maze
         self.flood = self.flooding([0, 0], self.known_maze)
+        tem = self.get_route(self.known_maze, self.flood)
+        print tem
         
         return rotation, movement
         
@@ -120,11 +122,38 @@ class Robot(object):
                 out[i] = None
         return out
         
-    def get_route(self, flood_valus):
-        pass
+    def get_route(self, maze_info, f):
+        '''
+        Given the flood values matrix, this function can generate routes leading
+        to the destination.
+        '''
         
+        num_routes = 1
         
+        center = self.maze_dim / 2 - 1
         
+        for i in range(2):
+            for j in range(2):
+                if f[center + i][center + j] != -1:
+                    N = f[center + i][center + j]
+                    head = [(center + i, center + j)]
+                    routes = [[(center + i, center + j)]]
         
+        while (N > 0):
+            N -= 1
+            for i in range(num_routes):
+                temp = self.get_neighbor_flood_value(head[i], maze_info, f)
+                nei = self.get_neighbors(head[i], maze_info)
+                ii = [x for x, y in enumerate(temp) if y == N]
+                l = len(ii)
+                if l > 1:
+                    num_routes += l - 1
+                    for j in range(l - 1):
+                        routes.append(routes[i][:])
+                        routes[-1].append(nei[ii[j + 1]])
+                        head.append(nei[ii[j + 1]])
+                head[i] = nei[ii[0]]
+                routes[i].append(nei[ii[0]])
+        return routes
         
         
