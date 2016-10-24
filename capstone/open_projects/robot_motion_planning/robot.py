@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import math
 
 class Robot(object):
     def __init__(self, maze_dim):
@@ -56,8 +57,8 @@ class Robot(object):
         #print self.location
         #print self.known_maze
         self.flood = self.flooding([0, 0], self.known_maze)
-        tem = self.get_route(self.known_maze, self.flood)
-        print tem
+        tem = self.get_routes(self.known_maze, self.flood)
+        move = self.get_moves(tem)
         
         return rotation, movement
         
@@ -122,14 +123,13 @@ class Robot(object):
                 out[i] = None
         return out
         
-    def get_route(self, maze_info, f):
+    def get_routes(self, maze_info, f):
         '''
         Given the flood values matrix, this function can generate routes leading
         to the destination.
         '''
         
         num_routes = 1
-        
         center = self.maze_dim / 2 - 1
         
         for i in range(2):
@@ -155,5 +155,66 @@ class Robot(object):
                 head[i] = nei[ii[0]]
                 routes[i].append(nei[ii[0]])
         return routes
+    
+    def get_moves(self, routes):
+        
+        moves = []
+        for i in range(len(routes)):
+            moves.append([])
+            vec = (0, 1)
+            for j in range(len(routes[i]) - 1):
+                disp = (routes[i][-(j + 2)][0] - routes[i][-(j + 1)][0], routes[i][-(j + 2)][1] - routes[i][-(j + 1)][1])
+                move = self.get_one_move(vec, disp)
+                moves[i].append(move)
+                vec = self.perform_rotation(vec, -move[0]/180.*math.pi)
+        return moves
+        
+    def get_one_move(self, vec, displacement):
+        
+        movement = 1
+        temp = (vec[0] * displacement[1] - vec[1] * displacement[0]) / (vec[0] * vec[0] + vec[1] * vec[1])
+        rotation = round(math.asin(temp) / math.pi * 180.)
+        if rotation == 0. and vec != displacement:
+            movement = -1
+        return (-rotation, movement)
+        
+    def vector_to_direction(self, vec):
+        if vec == (0, 1):
+            heading = 'up'
+        elif vec == (1, 0):
+            heading = 'right'
+        elif vec == (0, -1):
+            heading = 'down'
+        elif vec == (-1, 0):
+            heading = 'left'
+        return heading
+        
+    def direction_to_vector(self, heading):
+        if heading == 'up':
+            vec = (0, 1.)
+        elif heading == 'right':
+            vec = (1., 0)
+        elif heading == 'down':
+            vec = (0, -1.)
+        elif heading == 'left':
+            vec = (-1., 0)
+        return vec
+        
+    def perform_rotation(self, vec1, rotation):
+        c = math.cos(rotation)
+        s = math.sin(rotation)
+        vec2 = (round(c*vec1[0]-s*vec1[1]), round(s*vec1[0]+c*vec1[1]))
+        return vec2
+         
+         
+         
+         
+         
+         
+         
+         
+         
+         
+         
         
         
