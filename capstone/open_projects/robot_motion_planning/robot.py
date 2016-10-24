@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import math
+import sys
 
 class Robot(object):
     def __init__(self, maze_dim):
@@ -59,6 +60,9 @@ class Robot(object):
         self.flood = self.flooding([0, 0], self.known_maze)
         tem = self.get_routes(self.known_maze, self.flood)
         move = self.get_moves(tem)
+        print '===================='
+        self.maze_plotter(self.known_maze)
+        print '===================='
         
         return rotation, movement
         
@@ -179,6 +183,7 @@ class Robot(object):
         return (-rotation, movement)
         
     def vector_to_direction(self, vec):
+        
         if vec == (0, 1):
             heading = 'up'
         elif vec == (1, 0):
@@ -190,6 +195,7 @@ class Robot(object):
         return heading
         
     def direction_to_vector(self, heading):
+        
         if heading == 'up':
             vec = (0, 1.)
         elif heading == 'right':
@@ -201,10 +207,48 @@ class Robot(object):
         return vec
         
     def perform_rotation(self, vec1, rotation):
+        
         c = math.cos(rotation)
         s = math.sin(rotation)
         vec2 = (round(c*vec1[0]-s*vec1[1]), round(s*vec1[0]+c*vec1[1]))
         return vec2
+        
+    def maze_plotter(self, maze_info):
+        
+        n = len(maze_info)
+        for i in range(n):
+            if i == 0:
+                sys.stdout.write('*')
+                for j in range(n):
+                    bininfo = '000' + bin(maze_info[j][n - 1 - i])[2:]
+                
+                    if int(bininfo[-1]):
+                        sys.stdout.write('   ')
+                    else:
+                        sys.stdout.write('***')
+                    sys.stdout.write('*')
+                sys.stdout.write('\n')
+            sys.stdout.write('*')
+            for j in range(n):
+                bininfo = '000' + bin(maze_info[j][n - 1 - i])[2:]
+                
+                sys.stdout.write('   ')
+                if int(bininfo[-2]):
+                    sys.stdout.write(' ')
+                else:
+                    sys.stdout.write('*')
+            sys.stdout.write('\n')
+            sys.stdout.write('*')
+            for j in range(n):
+                bininfo = '000' + bin(maze_info[j][n - 1 - i])[2:]
+                
+                if int(bininfo[-3]):
+                    sys.stdout.write('   ')
+                else:
+                    sys.stdout.write('***')
+                sys.stdout.write('*')
+            sys.stdout.write('\n')
+                    
          
          
          
