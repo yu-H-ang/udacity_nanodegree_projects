@@ -24,7 +24,7 @@ class Maze(object):
             for line in f_in:
                 walls.append(map(int,line.split(',')))
             self.walls = np.array(walls)
-        
+
         # Perform validation on maze
         # Maze dimensions
         if self.dim % 2:

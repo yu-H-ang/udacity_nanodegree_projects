@@ -13,7 +13,7 @@ dir_reverse = {'u': 'd', 'r': 'l', 'd': 'u', 'l': 'r',
                'up': 'd', 'right': 'l', 'down': 'u', 'left': 'r'}
 
 # test and score parameters
-max_time = 2
+max_time = 100
 train_score_mult = 1/30.
 
 if __name__ == '__main__':
@@ -29,10 +29,13 @@ if __name__ == '__main__':
     testrobot = Robot(testmaze.dim)
     
     
-    testrobot.known_maze = testmaze.walls
-
-
-
+    
+    #testrobot.known_maze = testmaze.walls
+    
+    
+    
+    
+    
     # Record robot performance over two runs.
     runtimes = []
     total_time = 0
@@ -81,9 +84,6 @@ if __name__ == '__main__':
                 pass
             else:
                 print "Invalid rotation value, no rotation performed."
-            #===================================================================
-            testrobot.heading = robot_pos['heading']
-            #===================================================================
 
             # perform movement
             if abs(movement) > 3:
@@ -107,9 +107,6 @@ if __name__ == '__main__':
                     else:
                         print "Movement stopped by wall."
                         movement = 0
-            #===================================================================
-            testrobot.location = robot_pos['location']
-            #===================================================================
 
             # check for goal entered
             goal_bounds = [testmaze.dim/2 - 1, testmaze.dim/2]
@@ -119,8 +116,6 @@ if __name__ == '__main__':
                     runtimes.append(total_time - sum(runtimes))
                     run_active = False
                     print "Goal found; run {} completed!".format(run)
-        
-        print testrobot.flood
 
     # Report score if robot is successful.
     if len(runtimes) == 2:
