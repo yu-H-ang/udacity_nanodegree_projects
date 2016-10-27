@@ -2,6 +2,8 @@ import numpy as np
 import random
 import math
 import sys
+import os
+import time
 
 class Robot(object):
     def __init__(self, maze_dim):
@@ -11,24 +13,19 @@ class Robot(object):
         provided based on common information, including the size of the maze
         the robot is placed in.
         '''
-
+        
         self.location = [0, 0]
         self.heading = 'up'
         self.maze_dim = maze_dim
-        
         #=======================================================================
-        self.known_maze = np.ones((maze_dim, maze_dim), dtype = int) * 15
-        self.known_maze[0][0] = 3
-        self.known_maze[0][maze_dim - 1] = 6
-        self.known_maze[maze_dim - 1][0] = 9
-        self.known_maze[maze_dim - 1][maze_dim - 1] = 12
-        for i in range(maze_dim - 2):
-            self.known_maze[0][i + 1] = 7
-            self.known_maze[maze_dim - 1][i + 1] = 13
-            self.known_maze[i + 1][0] = 11
-            self.known_maze[i + 1][maze_dim - 1] = 14
+        self.known_maze = self.maze_initialization()
         self.flood = np.ones((maze_dim, maze_dim), dtype = int) * 15
-        self.SEC = False
+        self.control = 0
+        self.time = 0
+        # record the time that our robot ends each exploration
+        self.exploration1 = 0
+        self.exploration2 = 0
+        self.exploration3 = 0
         #=======================================================================
 
     def next_move(self, sensors):
@@ -53,45 +50,123 @@ class Robot(object):
         the tester to end the run and return the robot to the start.
         '''
         
+        # upload the sensors' information to the robot's memory
         self.known_maze = self.update_maze_info(self.location, self.heading, sensors, self.known_maze)
         
-        '''
-        if len(moves[0]) < 1:
+        cc = self.maze_dim / 2
+        
+        # exploration phase #1, left wall follower, the robot can end on
+        # starting point(#2) or destination point(jump to #3)
+        if self.control == 0:
+            
+            # starting point: begin #2 (most cases)
+            if  self.time > 2 and self.location == [0, 0]:
+                self.control += 1
+                self.exploration1 = self.time
+                rotation = 0
+                movement = 0
+            # destination point: junmp to # 3 (rare)
+            if (self.location[0] == cc - 1 or self.location[0] == cc) and (self.location[1] == cc - 1 or self.location[1] == cc):
+                self.control += 2
+                self.exploration2 = self.time
+                rotation = 0
+                movement = 0
+            else:
+                # left wall follower
+                if sensors[0] > 0:
+                    rotation = -90
+                    movement = 1
+                elif sensors[1] > 0:
+                    rotation = 0
+                    movement = 1
+                elif sensors[2] > 0:
+                    rotation = 90
+                    movement = 1
+                else:
+                    rotation = 90
+                    movement = 0
+        
+        # exploration phase #2, flood in algorithm
+        elif self.control == 1:
+            
+            # check if the robot reachs destination
+            if (self.location[0] == cc - 1 or self.location[0] == cc) and (self.location[1] == cc - 1 or self.location[1] == cc):
+                self.control += 1
+                self.exploration2 = self.time
+                rotation = 0
+                movement = 0
+            else:
+                # flood in algorithm
+                self.flood = self.flooding(self.location, self.known_maze)
+                routes = self.get_routes(self.known_maze, self.flood)
+                moves = self.get_moves(routes, self.location, self.heading)
+                #moves = self.moves_refinement(moves)
+                #moves = self.find_shortest_moves(moves)
+                rdm = random.choice(range(len(moves)))
+                rotation = moves[rdm][0][0]
+                movement = moves[rdm][0][1]
+        
+        # exploration phase #3, right wall follower
+        elif self.control == 2:
+            
+            # check if the robot reachs destination or gets back to the starting point
+            if  self.location == [0, 0]:
+                self.control += 1
+                self.exploration3 = self.time
+                rotation = 0
+                movement = 0
+            elif self.time > self.exploration2 + 6 and (self.location[0] == cc - 1 or self.location[0] == cc) and (self.location[1] == cc - 1 or self.location[1] == cc):
+                self.control += 1
+                self.exploration3 = self.time
+                rotation = 0
+                movement = 0
+            else:
+                # right wall follower
+                if sensors[2] > 0:
+                    rotation = 90
+                    movement = 1
+                elif sensors[1] > 0:
+                    rotation = 0
+                    movement = 1
+                elif sensors[0] > 0:
+                    rotation = -90
+                    movement = 1
+                else:
+                    rotation = -90
+                    movement = 0
+        
+        # reset robot
+        elif self.control == 3:
+            
+            # exploration completed, now start the 2nd run
+            self.control += 1
             rotation = 'Reset'
             movement = 'Reset'
             self.location = [0, 0]
             self.heading = 'up'
-        else:
-
+            
+        # 2nd run
+        elif self.control == 4:
+            
             # flood in algorithm
             self.flood = self.flooding(self.location, self.known_maze)
             routes = self.get_routes(self.known_maze, self.flood)
             moves = self.get_moves(routes, self.location, self.heading)
-            #moves = self.moves_refinement(moves)
-            #moves = self.find_shortest_moves(moves)
-            rotation = moves[0][0][0]
-            movement = moves[0][0][1]
-            '''
-            
-        # left-hand search
-        if sensors[0] > 0:
-            rotation = -90
-            movement = 1
-        elif sensors[1] > 0:
-            rotation = 0
-            movement = 1
-        elif sensors[2] > 0:
-            rotation = 90
-            movement = 1
-        else:
-            rotation = 90
-            movement = 0
+            moves = self.moves_refinement(moves)
+            moves = self.find_shortest_moves(moves)
+            rdm = random.choice(range(len(moves)))
+            rotation = moves[rdm][0][0]
+            movement = moves[rdm][0][1]
         
-        
-        
+        # display the whole process on the screen
+        os.system('clear')
         self.maze_plotter(self.known_maze, self.location, self.heading, [])
-        self.heading, self.location = self.update_location_heading(self.location, self.heading, movement, rotation)
-        print '============================================='
+        time.sleep(0.05)
+        
+        # update robot's own memory on its location ,heading, elapsed time
+        if rotation != 'Reset' and movement != 'Reset':
+            self.heading, self.location = self.update_location_heading(self.location, self.heading, movement, rotation)
+        self.time += 1
         
         return rotation, movement
         
@@ -416,7 +491,24 @@ class Robot(object):
                 n += 1
                 
         return moves
-            
+        
+    def maze_initialization(self):
+        '''
+        This function is used to initialize the maze information matrix.
+        '''
+        
+        maze = np.ones((self.maze_dim, self.maze_dim), dtype = int) * 15
+        maze[0][0] = 3
+        maze[0][self.maze_dim - 1] = 6
+        maze[self.maze_dim - 1][0] = 9
+        maze[self.maze_dim - 1][self.maze_dim - 1] = 12
+        for i in range(self.maze_dim - 2):
+            maze[0][i + 1] = 7
+            maze[self.maze_dim - 1][i + 1] = 13
+            maze[i + 1][0] = 11
+            maze[i + 1][self.maze_dim - 1] = 14
+        
+        return maze
         
         
         

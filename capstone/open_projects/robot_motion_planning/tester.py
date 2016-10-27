@@ -13,7 +13,7 @@ dir_reverse = {'u': 'd', 'r': 'l', 'd': 'u', 'l': 'r',
                'up': 'd', 'right': 'l', 'down': 'u', 'left': 'r'}
 
 # test and score parameters
-max_time = 100
+max_time = 1000
 train_score_mult = 1/30.
 
 if __name__ == '__main__':
@@ -27,15 +27,7 @@ if __name__ == '__main__':
 
     # Intitialize a robot; robot receives info about maze dimensions.
     testrobot = Robot(testmaze.dim)
-    
-    
-    
-    #testrobot.known_maze = testmaze.walls
-    
-    
-    
-    
-    
+
     # Record robot performance over two runs.
     runtimes = []
     total_time = 0
