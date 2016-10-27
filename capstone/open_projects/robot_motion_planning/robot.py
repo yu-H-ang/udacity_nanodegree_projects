@@ -19,6 +19,8 @@ class Robot(object):
         self.maze_dim = maze_dim
         #=======================================================================
         self.known_maze = self.maze_initialization()
+        self.coverage = np.zeros((maze_dim, maze_dim), dtype = int)
+        self.coverage[0, 0] = 1
         self.flood = np.ones((maze_dim, maze_dim), dtype = int) * 15
         self.control = 0
         self.time = 0
@@ -26,6 +28,8 @@ class Robot(object):
         self.exploration1 = 0
         self.exploration2 = 0
         self.exploration3 = 0
+        # temporary destination
+        self.tem = [0, 0]
         #=======================================================================
 
     def next_move(self, sensors):
@@ -52,6 +56,7 @@ class Robot(object):
         
         # upload the sensors' information to the robot's memory
         self.known_maze = self.update_maze_info(self.location, self.heading, sensors, self.known_maze)
+        self.coverage = self.update_coverage_info(self.location, self.heading, sensors)
         
         cc = self.maze_dim / 2
         
@@ -106,35 +111,28 @@ class Robot(object):
                 rotation = moves[rdm][0][0]
                 movement = moves[rdm][0][1]
         
-        # exploration phase #3, right wall follower
+        # exploration phase #3, roam the maze to get 100% map coverage
         elif self.control == 2:
             
-            # check if the robot reachs destination or gets back to the starting point
-            if  self.location == [0, 0]:
-                self.control += 1
-                self.exploration3 = self.time
-                rotation = 0
-                movement = 0
-            elif self.time > self.exploration2 + 6 and (self.location[0] == cc - 1 or self.location[0] == cc) and (self.location[1] == cc - 1 or self.location[1] == cc):
-                self.control += 1
-                self.exploration3 = self.time
-                rotation = 0
-                movement = 0
-            else:
-                # right wall follower
-                if sensors[2] > 0:
-                    rotation = 90
-                    movement = 1
-                elif sensors[1] > 0:
-                    rotation = 0
-                    movement = 1
-                elif sensors[0] > 0:
-                    rotation = -90
-                    movement = 1
+            if self.tem != [None, None]:
+                if self.coverage[self.tem[0]][self.tem[1]] == 0:
+                    f = self.flooding_to_other_cells(self.location, self.tem)
+                    routes = self.get_routes_from_other_cells(self.tem, self.known_maze, f)
+                    moves = self.get_moves(routes, self.location, self.heading)
+                    moves = self.moves_refinement(moves)
+                    moves = self.find_shortest_moves(moves)
+                    rdm = random.choice(range(len(moves)))
+                    rotation = moves[rdm][0][0]
+                    movement = moves[rdm][0][1]
                 else:
-                    rotation = -90
+                    self.tem = self.find_nearest_unreached(self.location)
+                    rotation = 0
                     movement = 0
-        
+            else:
+                self.control += 1
+                rotation = 0
+                movement = 0
+            
         # reset robot
         elif self.control == 3:
             
@@ -161,7 +159,7 @@ class Robot(object):
         # display the whole process on the screen
         os.system('clear')
         self.maze_plotter(self.known_maze, self.location, self.heading, [])
-        time.sleep(0.05)
+        time.sleep(0.055)
         
         # update robot's own memory on its location ,heading, elapsed time
         if rotation != 'Reset' and movement != 'Reset':
@@ -190,6 +188,29 @@ class Robot(object):
                     if(n[0] == d - 1 or n[1] == d - 1 or n[2] == d - 1 or n[3] == d - 1):
                         flood[i][j] = d
                     if(flood[des-1][des-1] != -1 or flood[des-1][des] != -1 or flood[des][des-1] != -1 or flood[des][des] != -1):
+                        return flood
+            d += 1
+            
+    def flooding_to_other_cells(self, robot_loc, dest):
+        '''
+        Given the current robot location, this function assign a flood value to
+        each cell, which designate how far the 'water' flows using the Flooding
+        Algorithm.
+        '''
+        
+        flood = np.ones((self.maze_dim, self.maze_dim), dtype = int) * (-1)
+        flood[robot_loc[0]][robot_loc[1]] = 0
+        des = self.maze_dim / 2
+        d = 1
+        while True:
+            for i in range(self.maze_dim):
+                for j in range(self.maze_dim):
+                    if(flood[i][j] != -1):
+                        continue
+                    n = self.get_neighbor_flood_value([i, j], self.known_maze, flood)
+                    if(n[0] == d - 1 or n[1] == d - 1 or n[2] == d - 1 or n[3] == d - 1):
+                        flood[i][j] = d
+                    if(flood[dest[0]][dest[1]] != -1):
                         return flood
             d += 1
         
@@ -251,6 +272,35 @@ class Robot(object):
                     # 'head' is the head of a route
                     head = [(center + i, center + j)]
                     routes = [[(center + i, center + j)]]
+        
+        while (N > 0):
+            N -= 1
+            for i in range(num_routes):
+                temp = self.get_neighbor_flood_value(head[i], maze_info, f)
+                nei = self.get_neighbors(head[i], maze_info)
+                ii = [x for x, y in enumerate(temp) if y == N]
+                l = len(ii)
+                if l > 1:
+                    num_routes += l - 1
+                    for j in range(l - 1):
+                        routes.append(routes[i][:])
+                        routes[-1].append(nei[ii[j + 1]])
+                        head.append(nei[ii[j + 1]])
+                head[i] = nei[ii[0]]
+                routes[i].append(nei[ii[0]])
+        
+        return routes
+        
+    def get_routes_from_other_cells(self, des, maze_info, f):
+        '''
+        Given the flood values matrix, this function can generate routes leading
+        to the destination.
+        '''
+        
+        num_routes = 1
+        N = f[des[0]][des[1]]
+        head = [(des[0], des[1])]
+        routes = [[(des[0], des[1])]]
         
         while (N > 0):
             N -= 1
@@ -461,6 +511,45 @@ class Robot(object):
         
         return maze_info
         
+    def update_coverage_info(self, loc, heading, sensors):
+        
+        l = self.maze_dim
+        x = loc[0]
+        y = loc[1]
+        N = -1
+        E = -1
+        S = -1
+        W = -1
+        
+        if heading == 'up':
+            W = sensors[0]
+            N = sensors[1]
+            E = sensors[2]
+        elif heading == 'right':
+            N = sensors[0]
+            E = sensors[1]
+            S = sensors[2]
+        elif heading == 'down':
+            E = sensors[0]
+            S = sensors[1]
+            W = sensors[2]
+        elif heading == 'left':
+            S = sensors[0]
+            W = sensors[1]
+            N = sensors[2]
+        
+        self.coverage[x][y] = 1
+        for i in range(N):
+            self.coverage[x][y + i + 1] = 1
+        for i in range(E):
+            self.coverage[x + i + 1][y] = 1
+        for i in range(S):
+            self.coverage[x][y - i - 1] = 1
+        for i in range(W):
+            self.coverage[x - i - 1][y] = 1
+        
+        return self.coverage
+        
     def moves_refinement(self, moves):
         '''
         This function combines multiple small strides to a larger one.
@@ -510,6 +599,23 @@ class Robot(object):
         
         return maze
         
+    def find_nearest_unreached(self, loc):
+        
+        dis = np.ones((self.maze_dim, self.maze_dim)) * float('inf')
+        
+        for i in range(self.maze_dim):
+            for j in range(self.maze_dim):
+                if self.coverage[i][j] == 0:
+                    dis[i][j] = abs(i - loc[0]) + abs(j - loc[0])
+        
+        if np.argmin(dis) > 0:
+            y = np.argmin(dis) % self.maze_dim
+            x = (np.argmin(dis) - y) / self.maze_dim
+        else:
+            x = None
+            y = None
+        
+        return [x, y]
         
         
         
