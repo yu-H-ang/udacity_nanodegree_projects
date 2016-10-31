@@ -113,4 +113,9 @@ if __name__ == '__main__':
     if len(runtimes) == 2:
         print "Task complete! Score: {:4.3f}".format(runtimes[1] + train_score_mult*runtimes[0])
         
-    print 'move1: {}, moves2: {}, path length: {}.'.format(testrobot.moves1, testrobot.moves2, testrobot.pathlength)
+    print 'RUN1, PHASE1: NoM: {}, Coverage: {:.3f}, Ratio: {:.2f}.'.format(testrobot.num_of_moves_run1_p1, testrobot.coverage_run1_p1, testrobot.num_of_moves_run1_p1/testrobot.coverage_run1_p1)
+    if testrobot.num_of_moves_run1_p2 > 0:
+        print 'RUN1, PHASE2: NoM: {}, Coverage: {:.3f}, Ratio: {:.2f}.'.format(testrobot.num_of_moves_run1_p2, testrobot.coverage_run1_p2, testrobot.num_of_moves_run1_p2/testrobot.coverage_run1_p2)
+    print 'RUN1, PHASE3: NoM: {}, Coverage: {:.3f}, Ratio: {:.2f}.'.format(testrobot.num_of_moves_run1_p3, testrobot.coverage_run1_p3, testrobot.num_of_moves_run1_p3/testrobot.coverage_run1_p3)
+    print 'RUN1: NoM: {}, Coverage: {:.3f}.'.format(testrobot.num_of_moves_run1, testrobot.coverage_run1_p1 + testrobot.coverage_run1_p2 + testrobot.coverage_run1_p3)
+    print 'RUN2: NoM: {}, Path length: {}'.format(testrobot.num_of_moves_run2, testrobot.pathlength_run2)

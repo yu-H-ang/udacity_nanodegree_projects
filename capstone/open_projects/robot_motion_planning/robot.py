@@ -30,9 +30,14 @@ class Robot(object):
         # temporary destination
         self.tem = [0, 0]
         # metrics
-        self.moves1 = 0
-        self.moves2 = 0
-        self.pathlength = 0
+        self.num_of_moves_run1 = 0
+        self.num_of_moves_run1_p1 = 0
+        self.num_of_moves_run1_p2 = 0
+        self.num_of_moves_run1_p3 = 0
+        self.coverage_run1_p1 = 0.
+        self.coverage_run1_p2 = 0.
+        self.num_of_moves_run2 = 0
+        self.pathlength_run2 = 0
         #=======================================================================
 
     def next_move(self, sensors):
@@ -67,7 +72,9 @@ class Robot(object):
         # starting point(#2) or destination point(jump to #3)
         if self.control == 0:
             
-            self.moves1 += 1
+            self.num_of_moves_run1 += 1
+            self.num_of_moves_run1_p1 += 1
+            self.coverage_run1_p1 = self.calculate_coverage_percentage()
             
             # starting point: begin #2 (most cases)
             if  self.time > 2 and self.location == [0, 0]:
@@ -99,7 +106,9 @@ class Robot(object):
         # exploration phase #2, flood in algorithm
         elif self.control == 1:
             
-            self.moves1 += 1
+            self.num_of_moves_run1 += 1
+            self.num_of_moves_run1_p2 += 1
+            self.coverage_run1_p2 = self.calculate_coverage_percentage() - self.coverage_run1_p1
             
             # check if the robot reachs destination
             if (self.location[0] == cc - 1 or self.location[0] == cc) and (self.location[1] == cc - 1 or self.location[1] == cc):
@@ -121,7 +130,9 @@ class Robot(object):
         # exploration phase #3, roam the maze to get 100% map coverage
         elif self.control == 2:
             
-            self.moves1 += 1
+            self.num_of_moves_run1 += 1
+            self.num_of_moves_run1_p3 += 1
+            self.coverage_run1_p3 = self.calculate_coverage_percentage() - self.coverage_run1_p1 - self.coverage_run1_p2
             
             if self.tem != [None, None]:
                 if self.coverage[self.tem[0]][self.tem[1]] < 15:
@@ -165,13 +176,13 @@ class Robot(object):
             rotation = moves[rdm][0][0]
             movement = moves[rdm][0][1]
             
-            self.moves2 += 1
-            self.pathlength += abs(movement)
+            self.num_of_moves_run2 += 1
+            self.pathlength_run2 += abs(movement)
             
         # display the whole process on the screen
         os.system('clear')
         self.maze_plotter(self.known_maze, self.location, self.heading, [])
-        time.sleep(0.055)
+        time.sleep(0.04)
         
         # update robot's own memory on its location ,heading, elapsed time
         if rotation != 'Reset' and movement != 'Reset':
@@ -670,6 +681,24 @@ class Robot(object):
         
         return [x, y]
         
+    def calculate_coverage_percentage(self):
+        
+        n = self.maze_dim
+        m = 0.
+        
+        for i in range(n):
+            for j in range(n):
+                bi = '000' + bin(self.coverage[i][j])[2:]
+                if int(bi[-1]):
+                    m += 1
+                if int(bi[-2]):
+                    m += 1
+                if int(bi[-3]):
+                    m += 1
+                if int(bi[-4]):
+                    m += 1
+        
+        return m / (n * n * 4.)
         
         
         
